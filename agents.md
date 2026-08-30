@@ -26,6 +26,7 @@
 - 2026-08-05：兩個技能的正式路徑（`clouds/`、`polls/`）由使用者實測通過，兩個技能自此可正式使用
 - 2026-08-06：清除已刪除的頂層 `words` 集合在技能文件與規則註解裡的殘留；`NB-YI` 補裝兩個技能到四家全域技能目錄
 - 2026-08-06：兩個技能改為**管理者登入制**——移除人人可見的「一鍵刪除全部／一鍵重置投票」，改成右上角登入後才出現管理功能；文字雲的管理者可刪除任何一則字詞。`firestore.rules` 的 `/admin_auth/` 寫入條件加上與 `config/admin` 的雜湊比對，讓「寫得進去」等於「密碼正確」
+- 2026-08-30：兩個技能各自設計專屬 Logo（`agent-draw` 生成後後製），同一張圖同時作為頁首標誌與瀏覽器分頁圖標，以 base64 內嵌；`teaching-web` 的文字雲頁一併套用
 
 ## 目標與路線圖
 - [x] 階段一：建立線上文字雲核心 HTML/CSS/JS 功能與視覺美化
@@ -44,15 +45,16 @@
 - [x] 階段十四：兩個技能同步到各 agent 的全域技能目錄（`/sync-skills`），`html-slide-builder` 的四家副本一併更新
 - [x] 階段十五：清除 `words` 集合殘留（兩份 `references/firestore-setup.md`、`firestore.rules` 註解、根目錄未追蹤的正式站殘檔）
 - [x] 階段十六：兩個技能改為管理者登入制（登入後才有刪除入口；文字雲管理者可刪個別字詞），安全規則加上登入驗證條件
-- [ ] 階段十七：新規則部署上線，並由使用者本人用一般瀏覽器實測登入／刪除個別字詞／清除全部
+- [ ] 階段十七：由使用者本人用一般瀏覽器實測登入／刪除個別字詞／清除全部（**部署前提已滿足**：階段十六的內容確認已在線上）
+- [x] 階段十八：兩個技能各自的 Logo 與瀏覽器分頁圖標，並套用到 `teaching-web` 的文字雲頁
 
 ## 資料夾結構
 - `firestore.rules`：Firestore 資料庫存取與格式驗證規則（所有互動頁共用的正本）
 - `wordcloud.html` / `poll.html`：本 repo 的示範／測試頁，由兩個技能產生
   （`demo_cloud_20260805`／`demo_poll_20260805`）；要改請改技能模板再重新產生
 - `tools/set-admin-password.mjs`：產生管理密碼與 SHA-256 雜湊
-- `skills/word-cloud-page/`：文字雲頁技能原始檔（`SKILL.md`、`assets/word-cloud-page.html` 單檔模板、`references/firestore-setup.md`）
-- `skills/poll-page/`：投票頁技能原始檔（同樣結構，模板為 `assets/poll-page.html`）
+- `skills/word-cloud-page/`：文字雲頁技能原始檔（`SKILL.md`、`assets/word-cloud-page.html` 單檔模板、`assets/logo.png` 標誌母檔、`references/firestore-setup.md`）
+- `skills/poll-page/`：投票頁技能原始檔（同樣結構，模板為 `assets/poll-page.html`，標誌母檔為 `assets/logo.png`）
 - `.firebaserc` / `firebase.json`：Firebase 專案配置
 - `.github/workflows/deploy.yml`：GitHub Actions 部署腳本
 - `agents.md`：專案藍圖（本檔）
@@ -92,9 +94,11 @@
 - **換網域時要同步更新四處**：技能模板（與已產生的頁面）裡的 `APP_CHECK_HOSTS`、reCAPTCHA 主控台網域清單、Firebase Console 的 App Check 設定、Firebase API key 的 referrer 限制。漏改會**靜默失敗**（未 Enforce 時完全無感）
 - GitHub Pages 設定為 `build_type: workflow`（與 `deploy.yml` 一致）；`.claude/launch.json` 是本機預覽設定（`python -m http.server 5173`），目前在版控內，不需要可 `git rm --cached`
 - **Firestore Emulator 需 Java 21 以上**：目前這台只有 Java 8，未升級前可用 Firebase MCP 的 `firebase_validate_security_rules` 做語法驗證，但不能宣稱已完成 Emulator 測試；不要把 Java 版本錯誤誤判成規則錯誤
+- **`deploy-pages` 顯示 failure／timeout 不代表內容沒上線。**實測（2026-08-30 回頭查 2026-08-06 那三次 run）：三次 run 全部 `failure`、`gh run list` 最後一次成功停在 `92a3312`，但線上頁面的內容其實已經是 `f79b1c7`——artifact 上傳成功後，Pages 後端仍可能在 workflow 判定失敗之後把部署完成。**判斷正式站到底是哪一版，一律 `curl` 線上頁面跟 `git show <sha>:<檔案>` 比對，不要看 workflow 結論**，否則會白白重跑部署、或誤以為某個階段還沒上線（上一版 handoff 就是這樣卡了 24 天）
 - **GitHub Pages 若在 artifact 上傳完成後卡於 `deploy-pages` 並 timeout，應重跑完整 `workflow_dispatch`，不要用 `gh run rerun --failed`**，否則可能撞到同名 artifact。若全新 run 仍連續卡在 deployment queue／in progress，停止快速重試並等待 Pages 後端恢復；不要為平台端排隊去修改 HTML 或縮小 repo
 - **`/decks/{slug}/...` 兩條規則已於 2026-08-05 刪除**（`html-slide-builder` 的簡報內嵌互動元件已整組移除，改呼叫本專案技能）。**不要因為在舊文件或舊簡報看到 `decks/` 就把規則加回來**——那些是歷史殘留，正確做法是改用 `clouds/` 或 `polls/` 的獨立互動頁
 - **⚠️ `firestore.rules` 的 `/clouds/{cloudId}/words/` 與 `/polls/{pollId}/votes/` 兩個區塊是 `skills/` 底下兩個技能的生命線，不要刪。**技能每產生一份頁面就給一個 id，資料落在對應子集合；一條規則涵蓋全部，所以新增頁面不必改規則、不必再部署。刪掉會讓**所有已經發出去的文字雲頁／投票頁同時靜默失效**。規則裡的欄位規格（`hasOnly`、長度與次數上限）與 `skills/*/assets/*.html` 的對應常數必須一致，改一邊就要改另一邊
+- **每份互動頁的標誌以 base64 PNG 內嵌，同一張圖在 HTML 裡有兩份複本**：`<head>` 的 `<link rel="icon">`（瀏覽器分頁圖標）與頁首的 `<img class="logo-mark">`。換標誌時**兩處都要換**，只改一處會出現「分頁圖標和頁首標誌不一樣」的詭異狀態。內嵌是刻意的——單檔頁面不能依賴外部圖檔，換部署位置也不會破圖。母檔（512px PNG）在各技能的 `assets/logo.png`，由 `agent-draw` 生成後去角圓化、降到 180px 並量化成 128 色才內嵌（未量化的 180px 會讓每頁多 40KB）
 - **兩個技能模板是各自獨立的程式碼**（`word-cloud-page` 與 `poll-page` 同源但分家）。一邊修 bug 不會流到另一邊；屬於「兩邊都該有」的性質（例如安全性修正、App Check 初始化順序），要明確地各改一次
 - **根目錄的示範頁是模板的產物，不是正本**。要改版面或行為，改 `skills/*/assets/*.html` 再重新產生 `wordcloud.html`／`poll.html`；直接改示範頁下次重產就被蓋掉。技能改完別忘了跑 `/sync-skills` 才會更新到各 agent 的全域技能目錄
 - **示範頁的 `demo_cloud_20260805`／`demo_poll_20260805` 是測試用 id，裡面有實測留下的資料。正式上課一律另外產生新頁面、換新 id**，沿用會讓兩批資料混在一起
